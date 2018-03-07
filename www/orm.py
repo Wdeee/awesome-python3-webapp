@@ -30,6 +30,7 @@ def log(sql, args=()):
 # 创建连接池：
 @asyncio.coroutine
 def create_pool(loop,**kw):
+# def create_pool(**kw):
 	logging.info('create database connection pool...')
 	global __pool
 	__pool=yield from aiomysql.create_pool(
@@ -63,7 +64,18 @@ def select(sql,arqs,size=None):
 		logging.info('rows returned: %s'%len(rs))
 		return rs
 
+	conn=yield from __pool
+	cur=yield from conn.cursor(aiomysql.DictCursor)
+	yield from cur.execute(sql.replace('?','%s'),args or ())
+	if size:
+		rs=yield from cur.fetchmany(size)
+	else:
+		re=yield from cur.fetchall()
+	yield from cur.close()
+	logging.info('rows returned: %s'%len(rs))
+	return rs	
 # # 以上select代码的等效写法，用await和acquire代替yield from。但是要注意函数的定义方法也要相应改变(@asyncio.coroutine改成async)
+# 需要明确的一点是，async def 和 @asyncio.coroutine两种函数定义是完全等效的，只要把await改成yield from
 # async def select(sql,arqs,size=None):
 # 	log(sql,args)
 # 	global __pool
@@ -80,19 +92,25 @@ def select(sql,arqs,size=None):
 
 # insert,update,delete语句:
 @asyncio.coroutine
-def execute(sql,args):				#使用一个通用的execute函数来执行这三种语句
+def execute(sql,args,autocommit=True):				#使用一个通用的execute函数来执行这三种语句
 	log(sql)
-	with(yield from __pool) as conn:
-		try:
-			cur=yield from conn.cursor(aiomysql,DictCursor)
-			yield from cur.execute(sql.replace('?','%s'),args)
-			affected=cur.rowcount
-			yield from cur.close()
-		except BaseException as e:
-			if not autocommit:
-				yield from conn.rollback()			#回滚,在执行commit()之前如果出现错误,就回滚到执行事务前的状态,以免影响数据库的完整性
-			raise
-		return affected
+	# with(await __pool.acquire()) as conn:			#在装饰器定义下，这句的等效写法见下一行
+	conn=yield from __pool.acquire()
+	if not autocommit:
+		yield from conn.begin()					#这句在定义execute的时候漏掉了，报了几次错
+	try:
+		cur=yield from conn.cursor(aiomysql.DictCursor)
+		yield from cur.execute(sql.replace('?','%s'),args)
+		affected=cur.rowcount
+		# yield from cur.close()
+		if not autocommit:
+			yield from conn.commit()
+	except BaseException as e:
+		if not autocommit:
+			yield from conn.rollback()			#回滚,在执行commit()之前如果出现错误,就回滚到执行事务前的状态,以免影响数据库的完整性
+		raise
+	return affected
+
 
 # 创建拥有几个占位符的字符串
 def create_args_string(num):
@@ -174,7 +192,8 @@ class ModelMetaclass(type):
 		escaped_fields=list(map(lambda f: '`%s`' %f,fields))
 		attrs['__mappings__']=mappings
 		attrs['__table__']=tableName
-		attrs['primary_key']=primaryKey
+		attrs['__primary_key__']=primaryKey
+		attrs['__fields__']=fields 				#一开始这里没有写fields属性，导致调用test1.py往数据库里增添数据的时候属性缺失
 		# 构造默认的select，insert，updated和delete语句：
 		# 添加反引号``是为了避免和sql关键字冲突,否则sql语句会执行出错
 		attrs['__select__']='select `%s`, %s from `%s`' %(primaryKey,','.join(escaped_fields),tableName)
@@ -225,7 +244,6 @@ class Model(dict,metaclass=ModelMetaclass):
 		return cls(**rs[0])
 		# user=yield from User.find('9595')
 
-	# 实例中会用到的findAll:
 	@classmethod
 	@asyncio.coroutine
 	def findAll(cls, where=None, args=None, **kw):
@@ -257,6 +275,7 @@ class Model(dict,metaclass=ModelMetaclass):
 		rs = yield from select(' '.join(sql), args)
 		return [cls(**r) for r in rs]
 
+
 	# 用装饰器和yield from写了一个findNumber：
 	@classmethod
 	@asyncio.coroutine
@@ -281,6 +300,7 @@ class Model(dict,metaclass=ModelMetaclass):
 		if rows!=1:
 			logging.warn('failed to insert record: affected rows: %s'%rows)
 
+
 	# 更新数据库数据：
 	@asyncio.coroutine
 	def update(self):
@@ -289,6 +309,7 @@ class Model(dict,metaclass=ModelMetaclass):
 		rows=yield from execute(self.__update__,args)
 		if rows!=1:
 			logging.warn('failed to update by primary key: affected rows: %s'%rows)
+
 
 	# 删除数据：
 	@asyncio.coroutine
@@ -300,29 +321,31 @@ class Model(dict,metaclass=ModelMetaclass):
 
 
 
+
 #ORM：
 # 用户名是一个str，id是个整数类型
-from orm import Model, StringField, IntegerField
+# from orm import Model, StringField, IntegerField
 
-class User(Model):
-	__table__='users'
+# class User(Model):
+# 	__table__='users'
 
-	id=IntegerField(primary_key=True)
-	name=StringField()
+# 	id=IntegerField(primary_key=True)
+# 	name=StringField()
 
-# 创建实例：
-user=User(id=9595,name='Dee')
-user.update()							#存入数据库
-# user.insert()							#原来写的是insert来存入数据库，但是Model并没有定义Insert这个方法，用的应该是update
-users=User.findAll()					#查询所有User对象
+# # 创建实例：
+# user=User(id=9595,name='Dee')
+# user.update()							#存入数据库
+# # user.insert()							#原来写的是insert来存入数据库，但是Model并没有定义Insert这个方法，用的应该是update
+# users=User.findAll()					#查询所有User对象
 
 
 
 
 # # #以下为测试
-# 别人写的测试，跑了以后报错显示连不上Mysql...我是用户名记错了嘛。。。也有可能是数据库里没有myshcool这个东西
+# 别人写的测试，跑了以后报错显示连不上Mysql...
+# 这个代码连对应的数据库框架都没有。。。当然跑不通。。。要修改的话，参考test1.py和models.py
 # loop = asyncio.get_event_loop()
-# loop.run_until_complete(create_pool(host='127.0.0.1', port=3306,user='root', password='wl9595',db='mySchool', loop=loop))
+# loop.run_until_complete(create_pool(host='127.0.0.1', port=3306,user='root', password='888888',db='mySchool', loop=loop))
 # rs = loop.run_until_complete(select('select * from firstSchool',None))
 # #获取到了数据库返回的数据
 # print("heh:%s" % rs)
