@@ -343,7 +343,7 @@ class Model(dict,metaclass=ModelMetaclass):
 
 # # #以下为测试
 # 别人写的测试，跑了以后报错显示连不上Mysql...
-# 这个代码连对应的数据库框架都没有。。。当然跑不通。。。要修改的话，参考test1.py和models.py
+# 这个代码连对应的数据库框架都没有。。。当然跑不通。。。要修改的话，参考test1.py，schema.sql和models.py
 # loop = asyncio.get_event_loop()
 # loop.run_until_complete(create_pool(host='127.0.0.1', port=3306,user='root', password='888888',db='mySchool', loop=loop))
 # rs = loop.run_until_complete(select('select * from firstSchool',None))
