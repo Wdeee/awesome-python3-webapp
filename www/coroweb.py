@@ -182,7 +182,7 @@ def add_routes(app,module_name):
 		mod=getattr(__import__(module_name[:n],globals(),locals(),[name]),name)			#加载
 	# 用for循环注册url的所有处理函数：
 	for attr in dir(mod):			
-		if attr.startwith('_'):
+		if attr.startswith('_'):
 			continue
 		fn=getattr(mod,attr)
 		if callable(fn):

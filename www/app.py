@@ -21,7 +21,7 @@ def init_jinja2(app, **kw):
 		)
 	path= kw.get('path',None)
 	if path is None:
-		path=os.path.join(os.path.dirnmae(os.path.abspath(__file__)), 'templates')
+		path=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 	logging.info('set jinja2 template path: %s'%path)
 	env= Environment(loader= FileSystemLoader(path), **options)
 	filters= kw.get('filters',None)
@@ -36,34 +36,57 @@ def init_jinja2(app, **kw):
 # middleware的用处就在于把通用的功能从每个URL处理函数中拿出来，集中放到一个地方。
 
 # 用来记录url日志的middleware:
-@asyncio.coroutine
-def logger_factory(app, handler):
-	def logger(request):
+# @asyncio.coroutine
+# def logger_factory(app, handler):
+# 	def logger(request):
+# 		logging.info('Request: %s %s'%(request.method, request.path))		#记录日志
+# 		# await asyncio.sleep(0.3)
+# 		return (yield from handler(request))				#继续处理请求
+# 	return logger
+# 	# pass
+
+async def logger_factory(app, handler):
+	async def logger(request):
 		logging.info('Request: %s %s'%(request.method, request.path))		#记录日志
 		# await asyncio.sleep(0.3)
-		return (yield from handler(request))				#继续处理请求
+		return (await handler(request))				#继续处理请求
 	return logger
-	# pass
 
-@asyncio.coroutine
-def  data_factory(app, handler):
-	def parse_data(request):
+# @asyncio.coroutine
+# def  data_factory(app, handler):
+# 	def parse_data(request):
+# 		if request.method=='POST':
+# 			if request.content_type.startswith('applicaiton/json'):
+# 				request.__data__= yield from request.json()
+# 				logging.info('request json: %s'%str(request.__data__))
+# 			elif request.content_type.startswith('applicaiton/x-www-form-urlencoded'):
+# 				request.__data__=yield from request.post()
+# 				logging.info('request form: %s'%str(request.__data__))
+# 		return (yield from handler(request))
+# 	return parse_data
+
+async def  data_factory(app, handler):
+	async def parse_data(request):
 		if request.method=='POST':
 			if request.content_type.startswith('applicaiton/json'):
-				request.__data__= yield from request.json()
+				request.__data__= await request.json()
 				logging.info('request json: %s'%str(request.__data__))
 			elif request.content_type.startswith('applicaiton/x-www-form-urlencoded'):
-				request.__data__=yield from request.post()
+				request.__data__=await request.post()
 				logging.info('request form: %s'%str(request.__data__))
-		return (yield from handler(request))
+		return (await handler(request))
 	return parse_data
 
 # response这个middleware用来把返回值转换成web.Response对象再返回，以保证满足aiohttp的要求
-@asyncio.coroutine
-def response_factory(app, handler):
-    def response(request):
+# @asyncio.coroutine
+# def response_factory(app, handler):
+#     def response(request):
+
+async def response_factory(app, handler):
+    async def response(request):
         logging.info('Response handler...')
-        r = yield from handler(request)
+        # r = yield from handler(request)
+        r = await handler(request)
         if isinstance(r, web.StreamResponse):
             return r
         if isinstance(r, bytes):
@@ -116,20 +139,33 @@ def datetime_filter(t):
 # 	# return web.Response(body=b'<h1>Awesome</h1>')
 # 	return web.Response(body=b'<h1>Awesome</h1>', headers={'content-type':'text/html'})				#如果body是二进制的时候，要在后面加上content-type为text/html(文本)，不然会变成下载操作。
 
-@asyncio.coroutine
-def init(loop):
+# @asyncio.coroutine
+# def init(loop):
+async def init(loop):
 	# 连接数据库的时候记得改密码
-	yield from orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='root', password="didn't show for safety reason", db='awesome')
+	# yield from orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='root', password="didn't show for safety reason", db='awesome')
+	# yield from orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='root', password="wl9595", db='awesome')
+	await orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='root', password="wl9595", db='awesome')
 	app=web.Application(loop=loop,middlewares=[logger_factory, response_factory])
 
 	# app.router.add_route('GET','/',index)
 	init_jinja2(app,filters=dict(datetime=datetime_filter))
 	add_routes(app,'handlers')
 	add_static(app)
-	srv=yield from loop.create_server(app.make_handler(),'127.0.0.1',9000)
+	# srv=yield from loop.create_server(app.make_handler(),'127.0.0.1',9000)
+	srv=await loop.create_server(app.make_handler(),'127.0.0.1',9000)
 	logging.info('server started at http://127.0.0.1:9000...')
 	return srv
 
 loop=asyncio.get_event_loop()
 loop.run_until_complete(init(loop))
 loop.run_forever()
+
+
+# debug日志：
+# ModuleNotFoundError: No module named 'handlers'：
+# 必须还要自己再配置一个handlers.py的module，不然会报错。
+
+# OSError: [Errno 10048] error while attempting to bind on address ('127.0.0.1', 9000): 通常每个套接字地址(协议/网络地址/端口)只允许使用一次。
+# 当程序运行一次后，9000地址就会被占用，直接重复运行会报出以上错误。
+# 我的解决方法是在cmd中重置了一下地址，然而这种方法还需要重启电脑，太过麻烦，不知道有没有更好的解决方案。
