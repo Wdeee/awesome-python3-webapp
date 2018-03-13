@@ -143,9 +143,7 @@ def datetime_filter(t):
 # def init(loop):
 async def init(loop):
 	# 连接数据库的时候记得改密码
-	# yield from orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='root', password="didn't show for safety reason", db='awesome')
-	# yield from orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='root', password="wl9595", db='awesome')
-	await orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='root', password="wl9595", db='awesome')
+    await orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='root', password="didn't show for safety reason", db='awesome')
 	app=web.Application(loop=loop,middlewares=[logger_factory, response_factory])
 
 	# app.router.add_route('GET','/',index)
@@ -153,7 +151,7 @@ async def init(loop):
 	add_routes(app,'handlers')
 	add_static(app)
 	# srv=yield from loop.create_server(app.make_handler(),'127.0.0.1',9000)
-	srv=await loop.create_server(app.make_handler(),'127.0.0.1',9000)
+	srv=await loop.create_server(app.make_handler(),'127.0.0.1',8003)          #第一次使用时记得改回9000
 	logging.info('server started at http://127.0.0.1:9000...')
 	return srv
 
@@ -169,3 +167,6 @@ loop.run_forever()
 # OSError: [Errno 10048] error while attempting to bind on address ('127.0.0.1', 9000): 通常每个套接字地址(协议/网络地址/端口)只允许使用一次。
 # 当程序运行一次后，9000地址就会被占用，直接重复运行会报出以上错误。
 # 我的解决方法是在cmd中重置了一下地址，然而这种方法还需要重启电脑，太过麻烦，不知道有没有更好的解决方案。
+
+# debug日志：
+# 各种跑不通。。。查出一堆隐藏在各个角落的typo和语法错误

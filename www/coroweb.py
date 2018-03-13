@@ -47,7 +47,7 @@ def get_required_kw_args(fn):
 def get_named_kw_args(fn):
 	args=[]
 	params=inspect.signature(fn).parameters
-	for name in params.items():
+	for name, param in params.items():
 		if param.kind==inspect.Parameter.KEYWORD_ONLY:
 			args.append(name)
 		# pass
@@ -84,12 +84,12 @@ class RequestHandler(object):
 	# __init__的参数不完整，记得补完
 	def __init__(self, app,fn):
 		
-		self.app = app
-		self.fn=fn
+		self._app = app
+		self._func=fn
 		# 补充其他参数：
-		self.has_request_arg=has_request_arg(fn)
-		self.has_var_kw_arg=has_var_kw_arg(fn)
-		self.has_named_kw_args=has_named_kw_args(fn)
+		self._has_request_arg=has_request_arg(fn)
+		self._has_var_kw_arg=has_var_kw_arg(fn)
+		self._has_named_kw_args=has_named_kw_args(fn)
 		self._named_kw_args=get_named_kw_args(fn)
 		self._required_kw_args=get_required_kw_args(fn)
 
@@ -120,7 +120,7 @@ class RequestHandler(object):
 		if kw is None:
 			kw= dict(**request.match_info)
 		else:
-			if not self.has_var_kw_arg and self._named_kw_args:			#如果出现了多余的参数(比如用户名，密码，邮箱以外不必要的参数)，就把它去掉
+			if not self._has_var_kw_arg and self._named_kw_args:			#如果出现了多余的参数(比如用户名，密码，邮箱以外不必要的参数)，就把它去掉
 				# remove all unamed kw:
 				copy=dict()
 				for name in self._named_kw_args:
@@ -140,7 +140,7 @@ class RequestHandler(object):
 					return web.HTTPBadRequest('Missing argument: %s'% name)
 		logging.info('call with args: %s'% str(kw))			#把参数传入fn
 		try:
-			r=yield from self.__func(**kw)
+			r=yield from self._func(**kw)
 			return r
 		except APIError as e:
 			return dict(error =e.error, data= e.data, message=e.message)

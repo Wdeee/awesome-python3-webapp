@@ -49,29 +49,29 @@ def create_pool(loop,**kw):
 # SELECT:
 # 该协程封装的是查询事务,第一个参数为sql语句,第二个为sql语句中占位符的参数列表,第三个参数是要查询数据的数量
 @asyncio.coroutine
-def select(sql,arqs,size=None):
+def select(sql,args,size=None):
 	log(sql,args)					#这些log都是在调用上面的调试级别函数
 	global __pool
 
-	with(yield from __pool) as conn:
-		cur=yield from conn.cursor(aiomysql.DictCursor)
-		yield from cur.execute(sql.replace('?','%s'),args or ())
-		if size:
-			rs=yield from cur.fetchmany(size)
-		else:
-			re=yield from cur.fetchall()
-		yield from cur.close()
-		logging.info('rows returned: %s'%len(rs))
-		return rs
+	# with(yield from __pool) as conn:
+	# 	cur=yield from conn.cursor(aiomysql.DictCursor)
+	# 	yield from cur.execute(sql.replace('?','%s'),args or ())
+	# 	if size:
+	# 		rs=yield from cur.fetchmany(size)
+	# 	else:
+	# 		rs=yield from cur.fetchall()
+	# 	# yield from cur.close()
+	# 	logging.info('rows returned: %s'%len(rs))
+	# 	return rs
 
-	conn=yield from __pool
+	conn=yield from __pool.acquire()
 	cur=yield from conn.cursor(aiomysql.DictCursor)
 	yield from cur.execute(sql.replace('?','%s'),args or ())
 	if size:
 		rs=yield from cur.fetchmany(size)
 	else:
-		re=yield from cur.fetchall()
-	yield from cur.close()
+		rs=yield from cur.fetchall()
+	# yield from cur.close()
 	logging.info('rows returned: %s'%len(rs))
 	return rs	
 # # 以上select代码的等效写法，用await和acquire代替yield from。但是要注意函数的定义方法也要相应改变(@asyncio.coroutine改成async)
