@@ -8,9 +8,12 @@
 	{% for blog in blogs %}
 		<article class="uk-article">
 			<h2><a href="/blog/{{blog.id}}">{{blog.name}}</a></h2>
-			<p class="uk-article-meta">发表于{{blog.created_at|datetime }}</p>
+			<!-- <p class="uk-article-meta">发表于{{blog.created_at|datetime }}</p> -->
+			<p class="uk-article-meta">由 Dee 发布于{{blog.created_at|datetime }}</p>
 			<p>{{blog.summary}}</p>
 			<p><a href="/blog/{{blog.id}}">继续阅读<i class="uk-icon-angle-double-right"></i></a></p>
+			<!-- <p><a href="https://voice.hupu.com/nba/2274998.html">继续阅读<i class="uk-icon-angle-double-right"></i></a></p> -->
+			<!-- <p><a href="https://voice.hupu.com/nba/2274867.html">继续阅读<i class="uk-icon-angle-double-right"></i></a></p> -->
 		</article>
 		<hr class="uk-article-devider">
 	{% endfor %}
@@ -20,10 +23,14 @@
 	<div class="uk-panel uk-panel-header">
 		<h3 class="uk-panel-title">友情链接</h3>
 		<ul class="uk-list uk-list-line">
-			<li><i class="uk-icon-thumb-o-up"></i> <a target="_blank" href="#">编程</a></li>
+<!-- 			<li><i class="uk-icon-thumb-o-up"></i> <a target="_blank" href="#">编程</a></li>
 			<li><i class="uk-icon-thumb-o-up"></i> <a target="_blank" href="#">读书</a></li>
 			<li><i class="uk-icon-thumb-o-up"></i> <a target="_blank" href="#">Python 教程</a></li>
-			<li><i class="uk-icon-thumb-o-up"></i> <a target="_blank" href="#">Git教程</a></li>
+			<li><i class="uk-icon-thumb-o-up"></i> <a target="_blank" href="#">Git教程</a></li> -->
+			<li><i class="uk-icon-thumb-o-up"></i> <a target="_blank" href="https://www.youtube.com/?hl=zh-HK&gl=HK">YouTube</a></li>
+			<li><i class="uk-icon-thumb-o-up"></i> <a target="_blank" href="https://nba.hupu.com/">虎扑主页</a></li>
+			<li><i class="uk-icon-thumb-o-up"></i> <a target="_blank" href="http://sports.sina.com.cn/nba/">新浪NBA</a></li>
+			<li><i class="uk-icon-thumb-o-up"></i> <a target="_blank" href="https://www.liaoxuefeng.com/wiki/0014316089557264a6b348958f449949df42a6d3a2e542c000">Python 教程</a></li>
 		</ul>
 	</div>
 </div>
