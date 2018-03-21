@@ -143,8 +143,7 @@ def datetime_filter(t):
 # def init(loop):
 async def init(loop):
 	# 连接数据库的时候记得改密码
-    # await orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='root', password="didn't show for safety reason", db='awesome')
-    await orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='root', password="wl9595", db='awesome')
+    await orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='root', password="didn't show for safety reason", db='awesome')
     app=web.Application(loop=loop,middlewares=[logger_factory, response_factory])
     # app.router.add_route('GET','/',index)
     init_jinja2(app,filters=dict(datetime=datetime_filter))
