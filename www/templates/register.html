@@ -22,6 +22,9 @@ $(function() {
 			submit: function(event){
 				event.preventDefault();
 				var $form =$('#vm');
+				if (! this.name.trim()){
+					return $fomr.showFormError('请输入名字');
+				}
 				if (! validateEmail(this.email.trim().toLowerCase())) {
 					return $form.showFormError('请输入正确的Email地址');
 				}
