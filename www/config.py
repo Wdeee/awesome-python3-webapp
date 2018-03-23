@@ -36,7 +36,6 @@ def merge(defaults,override):
 
 # 把从经过merge函数处理复写后的dict对象configs转变为文件中从dict基类派生出的Dict类对象，从而实现xxx.key的取值功能。
 def toDict(d):
-	# pass
 	D=Dict()
 	for k,v in d.items():
 		D[k]=toDict(v) if isinstance(v,dict) else v 			#如果值是一个dict递归将其转换为Dict再赋值，否则直接赋值

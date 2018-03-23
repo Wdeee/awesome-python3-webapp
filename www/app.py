@@ -40,73 +40,98 @@ def init_jinja2(app, **kw):
 # middleware的用处就在于把通用的功能从每个URL处理函数中拿出来，集中放到一个地方。
 
 # 用来记录url日志的middleware:
-# @asyncio.coroutine
-# def logger_factory(app, handler):
-# 	def logger(request):
+@asyncio.coroutine
+def logger_factory(app, handler):
+    @asyncio.coroutine
+    def logger(request):
+        logging.info('Request: %s %s'%(request.method, request.path))		#记录日志
+        # await asyncio.sleep(0.3)
+        return (yield from handler(request))				#继续处理请求
+    return logger
+	# pass
+
+# async def logger_factory(app, handler):
+# 	async def logger(request):
 # 		logging.info('Request: %s %s'%(request.method, request.path))		#记录日志
 # 		# await asyncio.sleep(0.3)
-# 		return (yield from handler(request))				#继续处理请求
+# 		return (await handler(request))				#继续处理请求
 # 	return logger
-# 	# pass
 
-async def logger_factory(app, handler):
-	async def logger(request):
-		logging.info('Request: %s %s'%(request.method, request.path))		#记录日志
-		# await asyncio.sleep(0.3)
-		return (await handler(request))				#继续处理请求
-	return logger
 
-# @asyncio.coroutine
-# def  data_factory(app, handler):
-# 	def parse_data(request):
-# 		if request.method=='POST':
-# 			if request.content_type.startswith('applicaiton/json'):
-# 				request.__data__= yield from request.json()
-# 				logging.info('request json: %s'%str(request.__data__))
-# 			elif request.content_type.startswith('applicaiton/x-www-form-urlencoded'):
-# 				request.__data__=yield from request.post()
-# 				logging.info('request form: %s'%str(request.__data__))
-# 		return (yield from handler(request))
-# 	return parse_data
-
-async def auth_factory(app,handler):
-    async def auth(request):
+@asyncio.coroutine
+def auth_factory(app,handler):
+    @asyncio.coroutine
+    def auth(request):
         logging.info('check user: %s %s'%(request.method, request.path))
         request.__user__=None
         cookie_str=request.cookies.get(COOKIE_NAME)
         if cookie_str:
-            user=await cookie2user(cookie_str)
+            user=yield from cookie2user(cookie_str)
             if user:
                 logging.info('set current user: %s' %user.email)
                 request.__user__=user
         if request.path.startswith('/manage/') and (request.__user__ is None or not request.__user__.admin):
             return web.HTTPFound('/signin')
-        return (await handler(request))
+        return (yield from handler(request))
     return auth
 
 
-async def  data_factory(app, handler):
-	async def parse_data(request):
-		if request.method=='POST':
-			if request.content_type.startswith('applicaiton/json'):
-				request.__data__= await request.json()
-				logging.info('request json: %s'%str(request.__data__))
-			elif request.content_type.startswith('applicaiton/x-www-form-urlencoded'):
-				request.__data__=await request.post()
-				logging.info('request form: %s'%str(request.__data__))
-		return (await handler(request))
-	return parse_data
+# async def auth_factory(app,handler):
+#     async def auth(request):
+#         logging.info('check user: %s %s'%(request.method, request.path))
+#         request.__user__=None
+#         cookie_str=request.cookies.get(COOKIE_NAME)
+#         if cookie_str:
+#             user=await cookie2user(cookie_str)
+#             if user:
+#                 logging.info('set current user: %s' %user.email)
+#                 request.__user__=user
+#         if request.path.startswith('/manage/') and (request.__user__ is None or not request.__user__.admin):
+#             return web.HTTPFound('/signin')
+#         return (await handler(request))
+#     return auth
+
+
+@asyncio.coroutine
+def  data_factory(app, handler):
+    @asyncio.coroutine
+    def parse_data(request):
+        if request.method=='POST':
+            if request.content_type.startswith('applicaiton/json'):
+                request.__data__= yield from request.json()
+                logging.info('request json: %s' % str(request.__data__))
+            elif request.content_type.startswith('applicaiton/x-www-form-urlencoded'):
+                request.__data__=yield from request.post()
+                logging.info('request form: %s'%str(request.__data__))
+        return (yield from handler(request))
+    return parse_data
+
+# async def  data_factory(app, handler):
+# 	async def parse_data(request):
+# 		if request.method=='POST':
+# 			if request.content_type.startswith('applicaiton/json'):
+# 				request.__data__= await request.json()
+# 				logging.info('request json: %s'%str(request.__data__))
+# 			elif request.content_type.startswith('applicaiton/x-www-form-urlencoded'):
+# 				request.__data__=await request.post()
+# 				logging.info('request form: %s'%str(request.__data__))
+# 		return (await handler(request))
+# 	return parse_data
 
 # response这个middleware用来把返回值转换成web.Response对象再返回，以保证满足aiohttp的要求
 # @asyncio.coroutine
 # def response_factory(app, handler):
 #     def response(request):
 
-async def response_factory(app, handler):
-    async def response(request):
+# async def response_factory(app, handler):
+    # async def response(request):
+@asyncio.coroutine
+def response_factory(app, handler):
+    @asyncio.coroutine
+    def response(request):
         logging.info('Response handler...')
-        # r = yield from handler(request)
-        r = await handler(request)
+        r = yield from handler(request)
+        # r = await handler(request)
         if isinstance(r, web.StreamResponse):
             return r
         if isinstance(r, bytes):
@@ -160,19 +185,19 @@ def datetime_filter(t):
 # 	# return web.Response(body=b'<h1>Awesome</h1>')
 # 	return web.Response(body=b'<h1>Awesome</h1>', headers={'content-type':'text/html'})				#如果body是二进制的时候，要在后面加上content-type为text/html(文本)，不然会变成下载操作。
 
-# @asyncio.coroutine
-# def init(loop):
-async def init(loop):
+@asyncio.coroutine
+def init(loop):
+# async def init(loop):
 	# 连接数据库的时候记得改密码
-    # await orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='root', password="didn't show for safety reason", db='awesome')
-    await orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='root', password="wl9595", db='awesome')
+    yield from orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='root', password="wl9595", db='awesome')
+    # await orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='root', password="wl9595", db='awesome')
     app=web.Application(loop=loop,middlewares=[logger_factory, auth_factory, response_factory])
     # app.router.add_route('GET','/',index)
     init_jinja2(app,filters=dict(datetime=datetime_filter))
     add_routes(app,'handlers')
     add_static(app)
-    # srv=yield from loop.create_server(app.make_handler(),'127.0.0.1',9000)
-    srv=await loop.create_server(app.make_handler(),'127.0.0.1',9000)          #第一次使用时记得改回9000
+    srv=yield from loop.create_server(app.make_handler(),'127.0.0.1',8000)
+    # srv=await loop.create_server(app.make_handler(),'127.0.0.1',8001)          #第一次使用时记得改回9000
     logging.info('server started at http://127.0.0.1:9000...')
     return srv
 
@@ -194,3 +219,22 @@ loop.run_forever()
 
 # debug日志(3/22)：
 # 完成了登陆部分的代码 但是问题还很多 经常出现加载过慢打不开的情况，暂时没有找到原因
+
+# debug日志(3/23):
+# 网页加载正常 但一旦点击注册或登陆后(登陆和注册是可以实现的)，注册，登陆和登出的按钮就会消失，而且无法再调用新的地址来加载网页。这个问题似乎教程里也并没有给出解决方案
+# 以上问题应该是代码有错。报错信息：
+# Traceback (most recent call last):
+#   File "C:\Users\lenovo\work\awesome-python3-webapp\www\handlers.py", line 67, in cookie2user
+#     user= await User.find(uid)
+#   File "C:\Users\lenovo\work\awesome-python3-webapp\www\orm.py", line 241, in find
+#     rs=yield from select('%s where `%s`=?'%(cls.__select__,cls.__primary_key__),[pk],1)
+#   File "C:\Users\lenovo\work\awesome-python3-webapp\www\orm.py", line 67, in select
+#     conn=yield from __pool.acquire()
+#   File "D:\Anaconda35.0.1\lib\site-packages\aiomysql\utils.py", line 70, in __iter__
+#     resp = yield from self._coro
+#   File "D:\Anaconda35.0.1\lib\site-packages\aiomysql\pool.py", line 147, in _acquire
+#     yield from self._cond.wait()
+#   File "D:\Anaconda35.0.1\lib\asyncio\locks.py", line 333, in wait
+#     yield from fut
+# concurrent.futures._base.CancelledError
+# 明天检查handlers.py, line 67, in cookie2user 和 orm.py
