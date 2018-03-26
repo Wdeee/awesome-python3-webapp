@@ -53,7 +53,7 @@ def select(sql,args,size=None):
 	log(sql,args)					#这些log都是在调用上面的调试级别函数
 	global __pool
 
-	# with(yield from __pool) as conn:
+	with(yield from __pool) as conn:
 	# 	cur=yield from conn.cursor(aiomysql.DictCursor)
 	# 	yield from cur.execute(sql.replace('?','%s'),args or ())
 	# 	if size:
@@ -64,16 +64,16 @@ def select(sql,args,size=None):
 	# 	logging.info('rows returned: %s'%len(rs))
 	# 	return rs
 
-	conn=yield from __pool.acquire()
-	cur=yield from conn.cursor(aiomysql.DictCursor)
-	yield from cur.execute(sql.replace('?','%s'),args or ())
-	if size:
-		rs=yield from cur.fetchmany(size)
-	else:
-		rs=yield from cur.fetchall()
-	# yield from cur.close()
-	logging.info('rows returned: %s'%len(rs))
-	return rs	
+		conn=yield from __pool.acquire()
+		cur=yield from conn.cursor(aiomysql.DictCursor)
+		yield from cur.execute(sql.replace('?','%s'),args or ())
+		if size:
+			rs=yield from cur.fetchmany(size)
+		else:
+			rs=yield from cur.fetchall()
+		# yield from cur.close()
+		logging.info('rows returned: %s'%len(rs))
+		return rs	
 # # 以上select代码的等效写法，用await和acquire代替yield from。但是要注意函数的定义方法也要相应改变(@asyncio.coroutine改成async)
 # 需要明确的一点是，async def 和 @asyncio.coroutine两种函数定义是完全等效的，只要把await改成yield from
 # async def select(sql,arqs,size=None):
@@ -102,7 +102,7 @@ def execute(sql,args,autocommit=True):				#使用一个通用的execute函数来
 		cur=yield from conn.cursor(aiomysql.DictCursor)
 		yield from cur.execute(sql.replace('?','%s'),args)
 		affected=cur.rowcount
-		# yield from cur.close()
+		yield from cur.close()
 		if not autocommit:
 			yield from conn.commit()
 	except BaseException as e:

@@ -196,7 +196,7 @@ def init(loop):
     init_jinja2(app,filters=dict(datetime=datetime_filter))
     add_routes(app,'handlers')
     add_static(app)
-    srv=yield from loop.create_server(app.make_handler(),'127.0.0.1',8000)
+    srv=yield from loop.create_server(app.make_handler(),'127.0.0.1',9000)
     # srv=await loop.create_server(app.make_handler(),'127.0.0.1',8001)          #第一次使用时记得改回9000
     logging.info('server started at http://127.0.0.1:9000...')
     return srv
@@ -238,3 +238,15 @@ loop.run_forever()
 #     yield from fut
 # concurrent.futures._base.CancelledError
 # 明天检查handlers.py, line 67, in cookie2user 和 orm.py
+
+
+# debug日志(3/26)：
+# 两天没跑，今天竟然奇迹般的跑通了。。。登陆功能彻底正常了
+# 要转到创建博客的页面，需要手动输入URL，底部的manage并没有写任何的URL，所以点开就是404
+# 现在的问题是，如果把这个网站比作一个进程的话（不知道可不可以这样比较），它是没有同时处理多线程的能力的，必须要等一个页面响应完毕后，才会去处理下一个"进程"。
+# 所以一旦一个环节写的有问题，整个网站都瘫痪了。。。
+# 不知道这个问题怎么解决，或许把所有URL处理函数换成异步线程的写法可破？
+# 报错：NameError: name 'set_cookie' is not defined
+# 解决方案：在handlers中import urllib
+# 每次打开manage/blogs/create的时候都会跳到signin界面，这是因为博客只能由管理员改写，所以要在mysql里把admin设为1，
+# 目前进行到这一步，下次继续

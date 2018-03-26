@@ -1,4 +1,5 @@
 ' url handlers '
+import urllib
 
 import re, time, json, logging, hashlib, base64, asyncio
 
@@ -116,7 +117,8 @@ def get_blog(id):
 		c.html_content=text2html(c.content)
 	blog.html_content = markdown2.markdown(blog.content)
 	return {
-	'__template__': 'blog.html',
+	# '__template__': 'blog.html',
+	'__template__': 'blogs.html',
 	# 这个模板并没有写啊，不知道会不会报错
 	'blog':blog,
 	'comments': comments
@@ -175,7 +177,7 @@ def authenticate(*,email,passwd):
 		raise APIValueError('passwd','Invalid password.')
 	# authenticate OK, set cookie:
 	r=web.Response()
-	r=set_cookie(COOKIE_NAME,user2cookie(user,86400), max_age=86400, httponly=True)
+	r.set_cookie(COOKIE_NAME,user2cookie(user,86400), max_age=86400, httponly=True)
 	user.passwd="wl9595"			#记得改
 	r.content_type='application/json'
 	r.body=json.dumps(user, ensure_ascii=False).encode('utf-8')
@@ -222,6 +224,7 @@ def api_register_user(*,email,name,passwd):
 	# make session cookie:
 	r=web.Response()
 	r.set_cookie(COOKIE_NAME, user2cookie(user,86400), max_age=86400, httponly=	True)
+	r.set-cookie(COOKIE_NAME, user2cookie(user,86400), max_age=86400, httponly=	True)
 	user.passwd='wl9595'
 	r.content_type='application/json'
 	r.body= json.dumps(user, ensure_ascii=False).encode('utf-8')
