@@ -250,3 +250,8 @@ loop.run_forever()
 # 解决方案：在handlers中import urllib
 # 每次打开manage/blogs/create的时候都会跳到signin界面，这是因为博客只能由管理员改写，所以要在mysql里把admin设为1，
 # 目前进行到这一步，下次继续
+
+
+# debug日志(3/31)：
+# 完成了对用户管理员权限的设置 (要先登陆，再转到日志创建页面)
+# 还是经常报出concurrent.futures._base.CancelledError，不知何解
